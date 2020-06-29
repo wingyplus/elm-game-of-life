@@ -1,13 +1,13 @@
 module Main exposing (main)
 
-import Array
+import Array exposing (Array)
 import Browser
 import Random
 import Random.Array exposing (array)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Time
-import World exposing (Cell(..), World, cellAt, nextGeneration, randomCell)
+import World exposing (Cell(..), Coordinate, World, generateCoordinates, nextGeneration, randomCell)
 
 
 type alias Flags =
@@ -25,7 +25,7 @@ type alias Model =
 
 type Msg
     = Tick Time.Posix
-    | Generated World
+    | Generated (Array Cell)
 
 
 main : Program Flags Model Msg
@@ -42,15 +42,23 @@ main =
 -- INIT
 
 
+{-| NOTE(wingyplus): Microsoft Edge and Chrome crashed when board size
+is more than 70. Firefox works fine.
+TODO(wingyplus): Remove size.
+-}
 init : Flags -> ( Model, Cmd Msg )
 init _ =
     let
         size =
-            70
+            60
     in
     ( { size = size
       , pixelPerCell = 32
-      , world = Array.fromList []
+      , world =
+            { cells = []
+            , coordinates = []
+            , size = size
+            }
       , initialized = False
       }
     , array (size * size) randomCell
@@ -65,12 +73,25 @@ init _ =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Generated world ->
-            ( { model | world = world, initialized = True }, Cmd.none )
+        Generated cells ->
+            let
+                world =
+                    model.world
+            in
+            ( { model
+                | world =
+                    { world
+                        | cells = cells |> Array.toList
+                        , coordinates = generateCoordinates world
+                    }
+                , initialized = True
+              }
+            , Cmd.none
+            )
 
         Tick _ ->
             ( { model
-                | world = nextGeneration model.size model.world
+                | world = nextGeneration model.world
               }
             , Cmd.none
             )
@@ -100,29 +121,24 @@ view model =
             (model.pixelPerCell * model.size) |> String.fromInt
     in
     svg [ width worldSize, height worldSize, viewBox ("0 0 " ++ worldSize ++ " " ++ worldSize) ]
-        (drawWorld model.pixelPerCell model.size model.world)
+        (drawWorld model.pixelPerCell model.world)
 
 
-drawWorld : Int -> Int -> World -> List (Svg Msg)
-drawWorld pixelPerCell size world =
-    List.range 0 (size - 1)
-        |> List.map
-            (\py ->
-                List.range 0 (size - 1)
-                    |> List.map
-                        (\px ->
-                            -- TODO(wingyplus): eliminate Maybe.
-                            cellAt px py size world |> Maybe.withDefault Dead |> drawCell px py pixelPerCell
-                        )
-            )
-        |> List.concat
+drawWorld : Int -> World -> List (Svg Msg)
+drawWorld pixelPerCell world =
+    List.map2
+        (\cell coordinate ->
+            drawCell pixelPerCell coordinate cell
+        )
+        world.cells
+        world.coordinates
 
 
-drawCell : Int -> Int -> Int -> Cell -> Svg Msg
-drawCell px py pixelPerCell cell =
+drawCell : Int -> Coordinate -> Cell -> Svg Msg
+drawCell pixelPerCell ( cx, cy ) cell =
     rect
-        [ px * pixelPerCell |> String.fromInt |> x
-        , py * pixelPerCell |> String.fromInt |> y
+        [ cx * pixelPerCell |> String.fromInt |> x
+        , cy * pixelPerCell |> String.fromInt |> y
         , pixelPerCell |> String.fromInt |> width
         , pixelPerCell |> String.fromInt |> height
         , Svg.Attributes.style (cellStyle cell)

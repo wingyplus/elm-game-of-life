@@ -1,7 +1,29 @@
-module World exposing (Cell(..), World, cellAt, nextGeneration, nextGenerationOfCell, randomCell)
+module World exposing
+    ( Cell(..)
+    , Coordinate
+    , World
+    , cellAt
+    , generateCoordinates
+    , nextGeneration
+    , nextGenerationOfCell
+    , randomCell
+    )
 
-import Array exposing (Array)
+import Array
 import Random
+
+
+type alias Coordinate =
+    ( Int, Int )
+
+
+generateCoordinates : World -> List Coordinate
+generateCoordinates world =
+    let
+        idx =
+            List.range 0 (world.size - 1)
+    in
+    List.concatMap (\x -> List.map (\y -> ( x, y )) idx) idx
 
 
 type Cell
@@ -10,12 +32,17 @@ type Cell
 
 
 type alias World =
-    Array Cell
+    { cells : List Cell
+    , coordinates : List Coordinate
+    , size : Int
+    }
 
 
-cellAt : Int -> Int -> Int -> World -> Maybe Cell
-cellAt px py size world =
-    Array.get ((py * size) + px) world
+cellAt : Coordinate -> World -> Maybe Cell
+cellAt ( x, y ) world =
+    world.cells
+        |> Array.fromList
+        |> Array.get ((y * world.size) + x)
 
 
 nextGenerationOfCell : List Cell -> Cell -> Cell
@@ -43,36 +70,35 @@ nextGenerationOfCell cellNeighbours cell =
                 Dead
 
 
-neighbours : Int -> Int -> Int -> World -> List Cell
-neighbours cellPx cellPy size world =
-    [ [ ( -1, -1 ), ( 0, -1 ), ( 1, -1 ) ]
-    , [ ( -1, 0 ), ( 1, 0 ) ]
-    , [ ( -1, 1 ), ( 0, 1 ), ( 1, 1 ) ]
+neighbours : Coordinate -> World -> List Cell
+neighbours ( x, y ) world =
+    [ ( -1, -1 )
+    , ( 0, -1 )
+    , ( 1, -1 )
+    , ( -1, 0 )
+    , ( 1, 0 )
+    , ( -1, 1 )
+    , ( 0, 1 )
+    , ( 1, 1 )
     ]
-        |> List.concat
         |> List.map
             (\( cx, cy ) ->
-                cellAt (cellPx - cx) (cellPy - cy) size world
-                    |> Maybe.withDefault Dead
+                cellAt ( x - cx, y - cy ) world |> Maybe.withDefault Dead
             )
 
 
-nextGeneration : Int -> World -> World
-nextGeneration size world =
-    List.range 0 (size - 1)
-        |> List.map
-            (\py ->
-                List.range 0 (size - 1)
-                    |> List.map
-                        (\px ->
-                            cellAt px py size world
-                                -- TODO(wingyplus): eliminate Maybe.
-                                |> Maybe.withDefault Dead
-                                |> nextGenerationOfCell (neighbours px py size world)
-                        )
-            )
-        |> List.concat
-        |> Array.fromList
+nextGeneration : World -> World
+nextGeneration world =
+    { world
+        | cells =
+            List.map2
+                (\cell coordinate ->
+                    cell
+                        |> nextGenerationOfCell (neighbours coordinate world)
+                )
+                world.cells
+                world.coordinates
+    }
 
 
 randomCell : Random.Generator Cell
