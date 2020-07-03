@@ -1,13 +1,14 @@
 module GameOfLife.World exposing
     ( Coordinate
     , World
-    , cellAt
     , generateCoordinates
+    , getCells
+    , initialize
     , nextGeneration
-    , nextGenerationOfCell
+    , setup
     )
 
-import Array
+import Dict exposing (Dict)
 import GameOfLife.Cell exposing (Cell(..))
 
 
@@ -28,18 +29,62 @@ type alias World =
     { cells : List Cell
     , coordinates : List Coordinate
     , size : Int
+    , cells2 : Dict Coordinate Cell
+    }
+
+-- PUBLIC
+
+setup : Int -> World
+setup size =
+    { cells = []
+    , coordinates = []
+    , cells2 = Dict.empty
+    , size = size
     }
 
 
-cellAt : Coordinate -> World -> Maybe Cell
-cellAt ( x, y ) world =
-    world.cells
-        |> Array.fromList
-        |> Array.get ((y * world.size) + x)
+initialize : List Cell -> World -> World
+initialize cells world =
+    { world
+        | cells2 =
+            List.map2 Tuple.pair (generateCoordinates world) cells
+                |> Dict.fromList
+    }
 
 
-nextGenerationOfCell : List Cell -> Cell -> Cell
-nextGenerationOfCell cellNeighbours cell =
+getCells : World -> List ( Coordinate, Cell )
+getCells world =
+    world.cells2 |> Dict.toList
+
+
+nextGeneration : World -> World
+nextGeneration world =
+    getCells world
+        |> List.map
+            (\( coordinate, cell ) ->
+                let
+                    mutateCell =
+                        cell
+                            |> mutate (neighbours coordinate world)
+                in
+                ( coordinate, mutateCell )
+            )
+        |> updateCells world
+
+
+
+-- PRIVATE
+
+
+updateCells : World -> List ( Coordinate, Cell ) -> World
+updateCells world cells =
+    { world | cells2 = Dict.fromList cells }
+
+
+{-| mutate cell depends on neighbour
+-}
+mutate : List Cell -> Cell -> Cell
+mutate cellNeighbours cell =
     let
         liveCells =
             List.filter (\ncell -> ncell == Live) cellNeighbours |> List.length
@@ -76,19 +121,5 @@ neighbours ( x, y ) world =
     ]
         |> List.map
             (\( cx, cy ) ->
-                cellAt ( x - cx, y - cy ) world |> Maybe.withDefault Dead
+                Dict.get ( x - cx, y - cy ) world.cells2 |> Maybe.withDefault Dead
             )
-
-
-nextGeneration : World -> World
-nextGeneration world =
-    { world
-        | cells =
-            List.map2
-                (\cell coordinate ->
-                    cell
-                        |> nextGenerationOfCell (neighbours coordinate world)
-                )
-                world.cells
-                world.coordinates
-    }

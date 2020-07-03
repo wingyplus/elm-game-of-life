@@ -3,7 +3,7 @@ module Main exposing (main)
 import Array exposing (Array)
 import Browser
 import GameOfLife.Cell exposing (Cell(..), randomCell)
-import GameOfLife.World exposing (Coordinate, World, generateCoordinates, nextGeneration)
+import GameOfLife.World as World
 import Random
 import Random.Array exposing (array)
 import Svg exposing (..)
@@ -19,7 +19,7 @@ type alias Model =
     { -- generate world size x size.
       size : Int
     , pixelPerCell : Int
-    , world : World
+    , world : World.World
     , initialized : Bool
     }
 
@@ -56,10 +56,7 @@ init _ =
     ( { size = size
       , pixelPerCell = 32
       , world =
-            { cells = []
-            , coordinates = []
-            , size = size
-            }
+            World.setup size
       , initialized = False
       }
     , array (size * size) randomCell
@@ -75,16 +72,9 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Generated cells ->
-            let
-                world =
-                    model.world
-            in
             ( { model
                 | world =
-                    { world
-                        | cells = cells |> Array.toList
-                        , coordinates = generateCoordinates world
-                    }
+                    World.initialize (Array.toList cells) model.world
                 , initialized = True
               }
             , Cmd.none
@@ -92,7 +82,7 @@ update msg model =
 
         Tick _ ->
             ( { model
-                | world = nextGeneration model.world
+                | world = World.nextGeneration model.world
               }
             , Cmd.none
             )
@@ -122,21 +112,20 @@ view model =
             (model.pixelPerCell * model.size) |> String.fromInt
     in
     svg [ width worldSize, height worldSize, viewBox ("0 0 " ++ worldSize ++ " " ++ worldSize) ]
-        (drawWorld model.pixelPerCell model.world)
+        (renderWorld model.pixelPerCell model.world)
 
 
-drawWorld : Int -> World -> List (Svg Msg)
-drawWorld pixelPerCell world =
-    List.map2
-        (\cell coordinate ->
-            drawCell pixelPerCell coordinate cell
-        )
-        world.cells
-        world.coordinates
+renderWorld : Int -> World.World -> List (Svg Msg)
+renderWorld pixelPerCell world =
+        World.getCells world
+        |> List.map
+            (\(coordinate , cell) ->
+                renderCell pixelPerCell coordinate cell
+            )
 
 
-drawCell : Int -> Coordinate -> Cell -> Svg Msg
-drawCell pixelPerCell ( cx, cy ) cell =
+renderCell : Int -> World.Coordinate -> Cell -> Svg Msg
+renderCell pixelPerCell ( cx, cy ) cell =
     rect
         [ cx * pixelPerCell |> String.fromInt |> x
         , cy * pixelPerCell |> String.fromInt |> y
