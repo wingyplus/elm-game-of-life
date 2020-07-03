@@ -17,9 +17,7 @@ type alias Flags =
 
 
 type alias Model =
-    { -- generate world size x size.
-      size : Int
-    , pixelPerCell : Int
+    { pixelPerCell : Int
     , world : World.World
     , initialized : Bool
     }
@@ -49,14 +47,13 @@ is more than 70. Firefox works fine.
 TODO(wingyplus): Remove size.
 -}
 init : Flags -> ( Model, Cmd Msg )
-init flags =
-    ( { size = flags.size
-      , pixelPerCell = 32
+init { size } =
+    ( { pixelPerCell = 32
       , world =
-            World.setup flags.size
+            World.setup size
       , initialized = False
       }
-    , array (flags.size * flags.size) randomCell
+    , array (size * size) randomCell
         |> Random.generate Generated
     )
 
@@ -106,7 +103,7 @@ view : Model -> Svg.Svg Msg
 view model =
     let
         worldSize =
-            (model.pixelPerCell * model.size) |> String.fromInt
+            (model.pixelPerCell * World.getSize model.world) |> String.fromInt
     in
     Svg.svg
         [ Svg.Attributes.width worldSize

@@ -3,13 +3,14 @@ module GameOfLife.World exposing
     , World
     , generateCoordinates
     , getCells
+    , getSize
     , initialize
     , nextGeneration
     , setup
     )
 
 import Dict exposing (Dict)
-import GameOfLife.Cell exposing (Cell(..))
+import GameOfLife.Cell as Cell
 
 
 type alias Coordinate =
@@ -26,13 +27,16 @@ generateCoordinates world =
 
 
 type alias World =
-    { cells : List Cell
+    { cells : List Cell.Cell
     , coordinates : List Coordinate
     , size : Int
-    , cells2 : Dict Coordinate Cell
+    , cells2 : Dict Coordinate Cell.Cell
     }
 
+
+
 -- PUBLIC
+
 
 setup : Int -> World
 setup size =
@@ -43,7 +47,7 @@ setup size =
     }
 
 
-initialize : List Cell -> World -> World
+initialize : List Cell.Cell -> World -> World
 initialize cells world =
     { world
         | cells2 =
@@ -52,9 +56,14 @@ initialize cells world =
     }
 
 
-getCells : World -> List ( Coordinate, Cell )
+getCells : World -> List ( Coordinate, Cell.Cell )
 getCells world =
     world.cells2 |> Dict.toList
+
+
+getSize : World -> Int
+getSize world =
+    world.size
 
 
 nextGeneration : World -> World
@@ -65,7 +74,7 @@ nextGeneration world =
                 let
                     mutateCell =
                         cell
-                            |> mutate (neighbours coordinate world)
+                            |> Cell.mutate (neighbours coordinate world)
                 in
                 ( coordinate, mutateCell )
             )
@@ -76,39 +85,13 @@ nextGeneration world =
 -- PRIVATE
 
 
-updateCells : World -> List ( Coordinate, Cell ) -> World
+updateCells : World -> List ( Coordinate, Cell.Cell ) -> World
 updateCells world cells =
     { world | cells2 = Dict.fromList cells }
 
 
-{-| mutate cell depends on neighbour
--}
-mutate : List Cell -> Cell -> Cell
-mutate cellNeighbours cell =
-    let
-        liveCells =
-            List.filter (\ncell -> ncell == Live) cellNeighbours |> List.length
-    in
-    case cell of
-        Dead ->
-            if liveCells == 3 then
-                Live
 
-            else
-                Dead
-
-        Live ->
-            if liveCells < 2 then
-                Dead
-
-            else if liveCells == 2 || liveCells == 3 then
-                Live
-
-            else
-                Dead
-
-
-neighbours : Coordinate -> World -> List Cell
+neighbours : Coordinate -> World -> List Cell.Cell
 neighbours ( x, y ) world =
     [ ( -1, -1 )
     , ( 0, -1 )
@@ -121,5 +104,5 @@ neighbours ( x, y ) world =
     ]
         |> List.map
             (\( cx, cy ) ->
-                Dict.get ( x - cx, y - cy ) world.cells2 |> Maybe.withDefault Dead
+                Dict.get ( x - cx, y - cy ) world.cells2 |> Maybe.withDefault Cell.Dead
             )
