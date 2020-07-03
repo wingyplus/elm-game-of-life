@@ -2,12 +2,13 @@ module Main exposing (main)
 
 import Array exposing (Array)
 import Browser
+import GameOfLife.Cell exposing (Cell(..), randomCell)
+import GameOfLife.World exposing (Coordinate, World, generateCoordinates, nextGeneration)
 import Random
 import Random.Array exposing (array)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Time
-import World exposing (Cell(..), Coordinate, World, generateCoordinates, nextGeneration, randomCell)
 
 
 type alias Flags =

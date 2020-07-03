@@ -1,16 +1,14 @@
-module World exposing
-    ( Cell(..)
-    , Coordinate
+module GameOfLife.World exposing
+    ( Coordinate
     , World
     , cellAt
     , generateCoordinates
     , nextGeneration
     , nextGenerationOfCell
-    , randomCell
     )
 
 import Array
-import Random
+import GameOfLife.Cell exposing (Cell(..))
 
 
 type alias Coordinate =
@@ -24,11 +22,6 @@ generateCoordinates world =
             List.range 0 (world.size - 1)
     in
     List.concatMap (\x -> List.map (\y -> ( x, y )) idx) idx
-
-
-type Cell
-    = Dead
-    | Live
 
 
 type alias World =
@@ -99,8 +92,3 @@ nextGeneration world =
                 world.cells
                 world.coordinates
     }
-
-
-randomCell : Random.Generator Cell
-randomCell =
-    Random.uniform Dead [ Live ]
