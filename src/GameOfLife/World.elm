@@ -27,10 +27,8 @@ generateCoordinates world =
 
 
 type alias World =
-    { cells : List Cell.Cell
-    , coordinates : List Coordinate
-    , size : Int
-    , cells2 : Dict Coordinate Cell.Cell
+    { size : Int
+    , cells : Dict Coordinate Cell.Cell
     }
 
 
@@ -40,9 +38,7 @@ type alias World =
 
 setup : Int -> World
 setup size =
-    { cells = []
-    , coordinates = []
-    , cells2 = Dict.empty
+    { cells = Dict.empty
     , size = size
     }
 
@@ -50,7 +46,7 @@ setup size =
 initialize : List Cell.Cell -> World -> World
 initialize cells world =
     { world
-        | cells2 =
+        | cells =
             List.map2 Tuple.pair (generateCoordinates world) cells
                 |> Dict.fromList
     }
@@ -58,7 +54,7 @@ initialize cells world =
 
 getCells : World -> List ( Coordinate, Cell.Cell )
 getCells world =
-    world.cells2 |> Dict.toList
+    world.cells |> Dict.toList
 
 
 getSize : World -> Int
@@ -87,8 +83,7 @@ nextGeneration world =
 
 updateCells : World -> List ( Coordinate, Cell.Cell ) -> World
 updateCells world cells =
-    { world | cells2 = Dict.fromList cells }
-
+    { world | cells = Dict.fromList cells }
 
 
 neighbours : Coordinate -> World -> List Cell.Cell
@@ -104,5 +99,5 @@ neighbours ( x, y ) world =
     ]
         |> List.map
             (\( cx, cy ) ->
-                Dict.get ( x - cx, y - cy ) world.cells2 |> Maybe.withDefault Cell.Dead
+                Dict.get ( x - cx, y - cy ) world.cells |> Maybe.withDefault Cell.Dead
             )
