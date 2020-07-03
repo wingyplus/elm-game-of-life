@@ -6,13 +6,14 @@ import GameOfLife.Cell exposing (Cell(..), randomCell)
 import GameOfLife.World as World
 import Random
 import Random.Array exposing (array)
-import Svg exposing (..)
-import Svg.Attributes exposing (..)
+import Svg
+import Svg.Attributes
 import Time
 
 
 type alias Flags =
-    ()
+    { size : Int
+    }
 
 
 type alias Model =
@@ -48,18 +49,14 @@ is more than 70. Firefox works fine.
 TODO(wingyplus): Remove size.
 -}
 init : Flags -> ( Model, Cmd Msg )
-init _ =
-    let
-        size =
-            60
-    in
-    ( { size = size
+init flags =
+    ( { size = flags.size
       , pixelPerCell = 32
       , world =
-            World.setup size
+            World.setup flags.size
       , initialized = False
       }
-    , array (size * size) randomCell
+    , array (flags.size * flags.size) randomCell
         |> Random.generate Generated
     )
 
@@ -105,32 +102,36 @@ subscriptions model =
 -- VIEW
 
 
-view : Model -> Svg Msg
+view : Model -> Svg.Svg Msg
 view model =
     let
         worldSize =
             (model.pixelPerCell * model.size) |> String.fromInt
     in
-    svg [ width worldSize, height worldSize, viewBox ("0 0 " ++ worldSize ++ " " ++ worldSize) ]
+    Svg.svg
+        [ Svg.Attributes.width worldSize
+        , Svg.Attributes.height worldSize
+        , Svg.Attributes.viewBox ("0 0 " ++ worldSize ++ " " ++ worldSize)
+        ]
         (renderWorld model.pixelPerCell model.world)
 
 
-renderWorld : Int -> World.World -> List (Svg Msg)
+renderWorld : Int -> World.World -> List (Svg.Svg Msg)
 renderWorld pixelPerCell world =
-        World.getCells world
+    World.getCells world
         |> List.map
-            (\(coordinate , cell) ->
+            (\( coordinate, cell ) ->
                 renderCell pixelPerCell coordinate cell
             )
 
 
-renderCell : Int -> World.Coordinate -> Cell -> Svg Msg
+renderCell : Int -> World.Coordinate -> Cell -> Svg.Svg Msg
 renderCell pixelPerCell ( cx, cy ) cell =
-    rect
-        [ cx * pixelPerCell |> String.fromInt |> x
-        , cy * pixelPerCell |> String.fromInt |> y
-        , pixelPerCell |> String.fromInt |> width
-        , pixelPerCell |> String.fromInt |> height
+    Svg.rect
+        [ cx * pixelPerCell |> String.fromInt |> Svg.Attributes.x
+        , cy * pixelPerCell |> String.fromInt |> Svg.Attributes.y
+        , pixelPerCell |> String.fromInt |> Svg.Attributes.width
+        , pixelPerCell |> String.fromInt |> Svg.Attributes.height
         , Svg.Attributes.style (cellStyle cell)
         ]
         []
